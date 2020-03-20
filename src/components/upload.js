@@ -59,9 +59,9 @@ function Upload() {
 */
 
   const makeDataObj = (dataArray) => {
-    console.log(dataArray);
+    console.log(dataArray); // data array is an object so we have to loop over the keys or something ...
     let returnArray = [];
-    Object.keys(dataArray){
+    for(var i in dataArray){
       let row = {};
       for(var j in dataArray[i]){
         row[i] = dataArray[i][j];
