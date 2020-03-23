@@ -4,92 +4,67 @@ import Grid from '@material-ui/core/Grid';
 import Alert from '@material-ui/lab/Alert';
 import axios from  'axios';
 import Papa from 'papaparse';
-
+import TableDisplay from './table';
 
 
 function Upload() {
 
   const [file, setFile] = useState('');
   const [fileName, setFileName] = useState('');
+  const [columns, setColumns] = useState([]);
   const [data, setData] = useState({})
-
-/*
-  const uploadFile = (event) => {
-    if(files.length <= 1){
-      console.log("selected one");
-      console.log(files);
-      const formData = new FormData();
-      formData.append('uploadedFile',files[0])
-      const config = {
-         headers: {
-             'content-type': 'multipart/form-data'
-         }
-       }
-      axios.post('http://localhost:3030/upload-file', formData, config)
-        .then(() => {
-          console.log("file Saved");
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    } else {
-      console.log("selected many");
-      console.log(files);
-      const formData = new FormData();
-      //append all files to formData
-      for(var file of files){
-        formData.append('uploadedFiles',file)
-      }
-      const config = {
-         headers: {
-             'content-type': 'multipart/form-data'
-         }
-       }
-      axios.post('http://localhost:3030/upload-files', formData, config)
-        .then(() => {
-          console.log("files Saved");
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }
-
-  }
-
-*/
-
-  const makeDataObj = (dataArray) => {
-    console.log(dataArray); // data array is an object so we have to loop over the keys or something ...
-    let returnArray = [];
-    for(var i in dataArray){
-      let row = {};
-      for(var j in dataArray[i]){
-        row[i] = dataArray[i][j];
-      }
-    }
-    console.log(returnArray);
-    return(returnArray);
-  }
+  const [displayData, setDisplayData] = useState(false);
+  const [displayWrongFileType, setDisplayWrongFileType] = useState(false);
 
 
   const changedFile = (event) => {
     const uploadedFile = event.target.files[0]
-    console.log(uploadedFile);
-    setFile(uploadedFile);
-    setFileName([uploadedFile.name]);
-    Papa.parse(uploadedFile, {
-               	 complete: function(results) {
-            		 console.log("Finished:");
-                 const dataObj = makeDataObj(results.data);
-                 setData(dataObj);
-            	  }
-            });
-
+    if(uploadedFile.name.match(/\.csv/)){
+      setDisplayWrongFileType(false);
+      setFile(uploadedFile);
+      setFileName([uploadedFile.name]);
+      Papa.parse(uploadedFile, {
+                   complete: function(results) {
+                   //const dataObj = makeDataObj(results.data);
+                   console.log(results);
+                   setColumns(results.meta.fields);
+                   setData(results.data);
+                   setDisplayData(true);
+                 },
+                 header: true
+              });
+    } else {
+        console.log("please upload a csv");
+        setDisplayWrongFileType(true);
+    }
   }
 
   const displayFileNames = () => {
     return(fileName ? <Alert  severity="success">{fileName}</Alert> : null);
   }
+
+  const runMl = (xCol, yCol) => {
+    console.log("selected one");
+    console.log(file);
+    const formData = new FormData();
+    formData.append('uploadedFile',file);
+    formData.append('xCol',xCol);
+    formData.append('yCol',yCol);
+    formData.append('cmd',"ls");
+    const config = {
+       headers: {
+           'content-type': 'multipart/form-data'
+       }
+     }
+    axios.post('http://localhost:3030/regression', formData, config)
+      .then(() => {
+        console.log("file Saved");
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
 
   return (
     <Grid container direction="column" justify="center" alignItems="flex-start">
@@ -106,7 +81,9 @@ function Upload() {
             </Button>
           </label>
           {displayFileNames()}
+          {displayWrongFileType ? <Alert  severity="success">Please upload a CSV (comma separated value) file</Alert> : null }
         </Grid>
+        {displayData && <TableDisplay data={data.slice(0, 10)} columns={columns} runMl={runMl}/> }
     </Grid>
   );
 }

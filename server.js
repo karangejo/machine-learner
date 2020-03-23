@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const _ = require('lodash');
 const mongoose = require('mongoose');
-var fs = require('fs');
+const fs = require('fs');
+const spawn = require("child_process").spawn;
+
 
 
 const FileMongo = require('./models/file');
@@ -168,4 +170,59 @@ app.get('/download', (req, res) => {
     console.log(err);
     res.json({ message: err.message})
   }
+});
+
+app.post('/regression', async (req, res) => {
+    console.log(req.files);
+    console.log(req.body.xCol);
+    console.log(req.body.yCol);
+    let dataToSend;
+    const cmdProcess = spawn(req.body.cmd);
+    cmdProcess.stdout.on('data', (data) => {
+      console.log('Pipe data from python script ...');
+      dataToSend = data.toString();
+    });
+    cmdProcess.on('close', (code) => {
+     console.log(`child process close all stdio with code ${code}`);
+     // send data to browser
+     console.log("DATA");
+     console.log(dataToSend);
+     console.log("DATA");
+     //res.send(dataToSend)
+    });
+    /*console.log(req.files);
+
+    command to run python script from commandline
+    python /python/runMLOnCSV.py './uploads/data.csv' two,three,four,five,six,seven,eight,nine,ten,eleven,twelve,thirteen,fourteen one
+    try {
+        if(!req.files) {
+            res.send({
+                status: false,
+                message: 'No file uploaded'
+            });
+        } else {
+            //Use the name of the input field (i.e. "newPhoto") to retrieve the uploaded file
+            let newFile = req.files.uploadedFile;
+
+            //Use the mv() method to place the file in upload directory (i.e. "uploads")
+            const filePath = './uploads/' + newFile.name
+            newFile.mv(filePath);
+            const pythonProcess = spawn('/home/karang/Documents/machine-learner/python/bin/python3.6',["/home/karang/Documents/machine-learner/python/runMLOnCSV.py", ("." +filePath), req.body.Xarray, req.body.Yarray]);
+            pythonProcess.stdout.on('data', (data) => {
+            // Do something with the data returned from python script
+              savePathToMongo(filePath,res);
+              res.send({
+                  status: true,
+                  message: 'File is uploaded',
+                  data: {
+                      name: newFile.name,
+                      mimetype: newFile.mimetype,
+                      size: newFile.size
+                  }
+              });
+            });
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }*/
 });
