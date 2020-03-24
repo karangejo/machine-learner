@@ -5,6 +5,7 @@ import Alert from '@material-ui/lab/Alert';
 import axios from  'axios';
 import Papa from 'papaparse';
 import TableDisplay from './table';
+import Browse from './browse';
 
 
 function Upload() {
@@ -15,7 +16,8 @@ function Upload() {
   const [data, setData] = useState({})
   const [displayData, setDisplayData] = useState(false);
   const [displayWrongFileType, setDisplayWrongFileType] = useState(false);
-
+  const [displayBrowser, setDisplayBrowser] = useState(false);
+  const [mlOutput, setMlOutput] = useState('');
 
   const changedFile = (event) => {
     const uploadedFile = event.target.files[0]
@@ -50,19 +52,31 @@ function Upload() {
     formData.append('uploadedFile',file);
     formData.append('xCol',xCol);
     formData.append('yCol',yCol);
-    formData.append('cmd',"ls");
     const config = {
        headers: {
            'content-type': 'multipart/form-data'
        }
      }
     axios.post('http://localhost:3030/regression', formData, config)
-      .then(() => {
+      .then((res) => {
         console.log("file Saved");
+        const output = res.data.data.mlData.match(/OUTPUT[\d\w\s.,:"()#+=\-\n\[\]]*OUTPUT/)[0].replace(/OUTPUT/,'').split(/\r?\n/);
+        console.log(output);
+        setMlOutput(output);
+        setDisplayBrowser(true);
       })
       .catch((err) => {
         console.log(err);
       });
+  }
+
+  const displayOutput = () => {
+    const items = mlOutput.map((value, index) => {
+      return(
+        <p key={index}>{value}</p>
+      )
+    });
+    return(items);
   }
 
 
@@ -84,6 +98,8 @@ function Upload() {
           {displayWrongFileType ? <Alert  severity="success">Please upload a CSV (comma separated value) file</Alert> : null }
         </Grid>
         {displayData && <TableDisplay data={data.slice(0, 10)} columns={columns} runMl={runMl}/> }
+        {displayBrowser && <Browse/> }
+        {displayBrowser && displayOutput()}
     </Grid>
   );
 }

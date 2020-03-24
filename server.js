@@ -4,13 +4,13 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const _ = require('lodash');
-const mongoose = require('mongoose');
+//const mongoose = require('mongoose');
 const fs = require('fs');
 const spawn = require("child_process").spawn;
 
 
 
-const FileMongo = require('./models/file');
+//const FileMongo = require('./models/file');
 
 const app = express();
 
@@ -19,11 +19,6 @@ app.use(fileUpload({
     createParentPath: true
 }));
 
-// connect to mongoDb
-mongoose.connect('mongodb://localhost:27017/', { useNewUrlParser: true })
-const db = mongoose.connection
-db.on('error', (error) => console.error(error))
-db.once('open', () => console.log('Connected to Database'))
 
 //add other middleware
 app.use(cors());
@@ -39,21 +34,7 @@ app.listen(port, () =>
 );
 
 
-
-//save file info to mongoDb
-const savePathToMongo = async (path, res) => {
-  const mongoFile = new FileMongo({
-                            date: new Date(),
-                            path: path
-                          })
-  try {
-    const newMongoFile = await mongoFile.save()
-    console.log(newMongoFile);
-  } catch (err) {
-    console.log(err);
-  }
-}
-
+/*
 app.post('/upload-files', async (req, res) => {
     try {
         if(!req.files) {
@@ -225,4 +206,81 @@ app.post('/regression', async (req, res) => {
     } catch (err) {
         res.status(500).send(err);
     }*/
+//});
+//*/
+
+app.post('/regression', async (req, res) => {
+    try {
+        if(!req.files) {
+            res.send({
+                status: false,
+                message: 'No file uploaded'
+            });
+        } else {
+            //Use the name of the input field (i.e. "newPhoto") to retrieve the uploaded file
+            let newFile = req.files.uploadedFile;
+
+            //Use the mv() method to place the file in upload directory (i.e. "uploads")
+            const filePath = './uploads/' + newFile.name
+            newFile.mv(filePath);
+            const pythonProcess = spawn('/home/karang/Documents/machine-learner/python/bin/python3.6',["/home/karang/Documents/machine-learner/python/runMLRegOnCSV.py", filePath, req.body.xCol, req.body.yCol]);
+            let dataToSend = '';
+            pythonProcess.stdout.on('data', (data) => {
+            // Do something with the data returned from python script
+              console.log('Pipe data from python script ...');
+              dataToSend = data.toString() + dataToSend;
+            });
+            pythonProcess.on('close', (code) => {
+             console.log(`child process close all stdio with code ${code}`);
+             console.log(dataToSend);
+             // send data to browser
+               res.send({
+                   status: true,
+                   message: 'File is uploaded and processed',
+                   data: {
+                       name: newFile.name,
+                       mimetype: newFile.mimetype,
+                       size: newFile.size,
+                       mlData: dataToSend
+                   }
+               });
+
+               fs.unlink(filePath, (err) => {
+                  if(err){
+                    console.log(err);
+                  } else {
+                    console.log(filePath + ' was deleted');
+                  }
+                });
+
+            });
+
+
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+app.get('/models', async (req, res) => {
+  console.log("getting the models");
+  try{
+      let files = fs.readdirSync('./modelCheckpoints/');
+      res.status(200).json(files);
+  } catch (err) {
+    res.status(400).json({ message: err.message})
+  }
+})
+
+app.get('/download', (req, res) => {
+  console.log(req.query);
+  const dirname = './modelCheckpoints/'
+  const file = dirname + req.query.fileName;
+  console.log(file);
+  try{
+    res.download(file); // Set disposition and send it.
+  } catch (err) {
+    console.log(err);
+    res.json({ message: err.message})
+  }
 });

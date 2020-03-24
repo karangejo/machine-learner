@@ -10,7 +10,7 @@ function Browse() {
   const [fileNames, setFileNames] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:3030/files')
+    axios.get('http://localhost:3030/models')
       .then((res) => {
         console.log(res.data);
         setFileNames(res.data);
@@ -21,18 +21,11 @@ function Browse() {
     const fileName = event.target.getAttribute('value')
     console.log(fileName);
     window.open('http://localhost:3030/download?fileName='+fileName);
-    /*const res = await axios.post('http://localhost:3030/download',{fileName: fileName})
-      .then((res) => {
-        console.log(res)
-        window.open()
-      });
-    //const res = await fetch('http://localhost:3030/download');
-    //download(blob); */
   }
 
   const displayFileNames = () => {
     const items = fileNames.map((value, index) => {
-      const name = value.path.replace(/.\/uploads\//g,"")
+      const name = value
       return(
         <Link key={index} href="#" value={name} onClick={downloadFile}>{name}</Link>
       );
